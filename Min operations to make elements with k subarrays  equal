@@ -1,0 +1,175 @@
+class Solution:
+    def minOperations(self, nums: List[int], x: int, k: int) -> int:
+        from typing import List
+from bisect import bisect_left
+
+
+class Fenwick:
+    def __init__(self, n):
+        self.n = n
+        self.bit = [0] * (n + 1)
+
+    def add(self, i, value):
+        while i <= self.n:
+            self.bit[i] += value
+            i += i & -i
+
+    def query(self, i):
+        result = 0
+        while i > 0:
+            result += self.bit[i]
+            i -= i & -i
+        return result
+
+    def kth(self, k):
+        idx = 0
+        step = 1 << (self.n.bit_length() - 1)
+
+        while step:
+            nxt = idx + step
+
+            if nxt <= self.n and self.bit[nxt] < k:
+                idx = nxt
+                k -= self.bit[nxt]
+
+            step >>= 1
+
+        return idx + 1
+
+
+class Solution:
+    def minOperations(self, nums: List[int], x: int, k: int) -> int:
+        n = len(nums)
+
+        if k == 0:
+            return 0
+
+        if n < x * k:
+            return -1
+
+        # Coordinate compression
+        values = sorted(set(nums))
+        m = len(values)
+
+        compressed = [
+            bisect_left(values, v) + 1 for v in nums
+        ]
+
+        count_tree = Fenwick(m)
+        sum_tree = Fenwick(m)
+
+        left_sum = 0
+        right_sum = 0
+        left_count = 0
+        right_count = 0
+
+        # Add one element to the sliding window
+        def add(i):
+            nonlocal left_sum, right_sum
+            nonlocal left_count, right_count
+
+            value = nums[i]
+            pos = compressed[i]
+
+            count_tree.add(pos, 1)
+            sum_tree.add(pos, value)
+
+            if left_count == 0:
+                left_sum += value
+                left_count += 1
+                return
+
+            median_pos = count_tree.kth(
+                (left_count + right_count + 1) // 2
+            )
+            median = values[median_pos - 1]
+
+            if value <= median:
+                left_sum += value
+                left_count += 1
+            else:
+                right_sum += value
+                right_count += 1
+
+        # Remove one element from the sliding window
+        def remove(i):
+            nonlocal left_sum, right_sum
+            nonlocal left_count, right_count
+
+            value = nums[i]
+            pos = compressed[i]
+
+            count_tree.add(pos, -1)
+            sum_tree.add(pos, -value)
+
+            if left_count > 0:
+                median_pos = count_tree.kth(
+                    (left_count + right_count + 1) // 2
+                )
+                median = values[median_pos - 1]
+            else:
+                median = None
+
+            if median is not None and value <= median:
+                left_sum -= value
+                left_count -= 1
+            else:
+                right_sum -= value
+                right_count -= 1
+
+        # Cost of making every element in a window equal
+        def get_cost():
+            total = left_count + right_count
+
+            median_pos = count_tree.kth(
+                (total + 1) // 2
+            )
+            median = values[median_pos - 1]
+
+            left = count_tree.query(median_pos)
+            left_total = sum_tree.query(median_pos)
+
+            right = total - left
+            right_total = sum_tree.query(m) - left_total
+
+            return (
+                median * left - left_total
+                + right_total - median * right
+            )
+
+        # Calculate the cost for every window of length x
+        costs = []
+
+        for i in range(n):
+            add(i)
+
+            if i >= x:
+                remove(i - x)
+
+            if i >= x - 1:
+                costs.append(get_cost())
+
+        # DP: minimum cost using exactly j subarrays
+        INF = float("inf")
+        prev = [0] * (n + 1)
+
+        for j in range(1, k + 1):
+            curr = [INF] * (n + 1)
+
+            for i in range(1, n + 1):
+                # Skip the current element
+                curr[i] = curr[i - 1]
+
+                # Select a subarray ending at index i - 1
+                if i >= x:
+                    cost = costs[i - x]
+
+                    if prev[i - x] != INF:
+                        curr[i] = min(
+                            curr[i],
+                            prev[i - x] + cost
+                        )
+
+            prev = curr
+
+        return prev[n]
