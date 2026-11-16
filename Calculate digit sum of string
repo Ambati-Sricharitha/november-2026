@@ -1,0 +1,16 @@
+class Solution:
+    def digitSum(self, s: str, k: int) -> str:
+       
+        # Repeat rounds until the length of s is less than or equal to k
+        while len(s) > k:
+            new_s = []
+            # Slice the string into chunks of size k
+            for i in range(0, len(s), k):
+                chunk = s[i:i + k]
+                # Sum the integer value of each digit in the chunk
+                chunk_sum = sum(int(digit) for digit in chunk)
+                new_s.append(str(chunk_sum))
+            # Join all group sums to form the string for the next round
+            s = "".join(new_s)
+            
+        return s
