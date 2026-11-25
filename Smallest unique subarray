@@ -1,0 +1,52 @@
+from collections import Counter
+from typing import List
+
+
+class Solution:
+
+  def smallestUniqueSubarray(self, nums: List[int]) -> int:
+    n = len(nums)
+
+    # Double hashing parameters to avoid collisions
+    BASE1, MOD1 = 1315423911, 10**9 + 7
+    BASE2, MOD2 = 2654435761, 10**9 + 9
+
+    def has_unique_subarray(length: int) -> bool:
+      h1 = 0
+      h2 = 0
+      p1 = pow(BASE1, length, MOD1)
+      p2 = pow(BASE2, length, MOD2)
+
+      counts = Counter()
+
+      for i, val in enumerate(nums):
+        # Shift window right by adding current element
+        h1 = (h1 * BASE1 + val) % MOD1
+        h2 = (h2 * BASE2 + val) % MOD2
+
+        # Remove the element falling out of the left side of the window
+        if i >= length:
+          out_val = nums[i - length]
+          h1 = (h1 - out_val * p1) % MOD1
+          h2 = (h2 - out_val * p2) % MOD2
+
+        # Record hash once the window reaches the target length
+        if i >= length - 1:
+          counts[(h1, h2)] += 1
+
+      # Valid if any subarray hash of this length appeared strictly once
+      return any(freq == 1 for freq in counts.values())
+
+    # Binary search on the answer length
+    left, right = 1, n
+    ans = n
+
+    while left <= right:
+      mid = (left + right) // 2
+      if has_unique_subarray(mid):
+        ans = mid
+        right = mid - 1  # Try to find an even smaller length
+      else:
+        left = mid + 1  # Increase length
+
+    return ans
