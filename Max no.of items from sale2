@@ -1,0 +1,34 @@
+class Solution:
+    def maximumSaleItems(self, items: List[List[int]], budget: int) -> int:
+        
+        n = len(items)
+
+        freq = [0] * (n + 1)
+
+        for factor, price in items:
+            freq[factor] += 1
+
+        gain = [0] * (n + 1)
+
+        for f in range(1, n + 1):
+            for x in range(f, n + 1, f):
+                gain[f] += freq[x]
+            gain[f] -= 1
+
+        min_price = min(price for factor, price in items)
+
+        items.sort(key=lambda x: x[1])
+
+        remaining = budget
+        boosted = 0
+
+        for factor, price in items:
+            if price > 2 * min_price:
+                break
+
+            count = min(gain[factor], remaining // price)
+
+            boosted += count
+            remaining -= count * price
+
+        return 2 * boosted + remaining // min_price
